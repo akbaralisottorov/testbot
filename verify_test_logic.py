@@ -41,7 +41,10 @@ def run_tests():
     init_db()
     
     # 2. Parse and Import Excel
-    excel_path = os.path.join("data", "tests.xlsx")
+    from generate_large_sample import generate_large_dataset
+    excel_path = os.path.join("data", "temp_test.xlsx")
+    generate_large_dataset(excel_path)
+    
     print(f"\n2. Importing Excel file: {excel_path}...")
     import_result = parse_and_import_excel(excel_path, clear_existing=True)
     
@@ -250,7 +253,27 @@ def run_tests():
     assert mistakes_after == 0, f"Expected 0 mistakes after clearing, got {mistakes_after}"
     print("   - Wrong Answers Notebook clearing check: Cleared successfully (Passed)")
     
+    # Clean up temp file
+    if os.path.exists(excel_path):
+        try: os.remove(excel_path)
+        except Exception: pass
+        
     print("\n=== ALL LOGIC VERIFIED SUCCESSFULLY ===")
+    
+    # Restore actual database
+    print("\n14. Restoring user database from tests.xlsx...")
+    db_file = os.path.join("data", "database.db")
+    if os.path.exists(db_file):
+        try: os.remove(db_file)
+        except Exception: pass
+    init_db()
+    
+    actual_excel = os.path.join("data", "tests.xlsx")
+    if os.path.exists(actual_excel):
+        parse_and_import_excel(actual_excel, clear_existing=True)
+        print("   User database restored successfully.")
+    else:
+        print("   No actual tests.xlsx file found to restore.")
 
 if __name__ == "__main__":
     run_tests()

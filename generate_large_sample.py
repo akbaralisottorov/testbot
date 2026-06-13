@@ -3,7 +3,7 @@ import random
 import pandas as pd
 from config import DATA_DIR
 
-def generate_large_dataset():
+def generate_large_dataset(file_path=None):
     # Set seed for reproducible generation but randomly distributed answers
     random.seed(42)
     
@@ -54,11 +54,12 @@ def generate_large_dataset():
     df = pd.DataFrame(data)
     
     os.makedirs(DATA_DIR, exist_ok=True)
-    file_path = os.path.join(DATA_DIR, "tests.xlsx")
+    if file_path is None:
+        file_path = os.path.join(DATA_DIR, "tests.xlsx")
     
     print(f"Generating {len(df)} questions...")
     df.to_excel(file_path, index=False)
     print(f"Successfully saved sample test data to: {file_path}")
-
+ 
 if __name__ == "__main__":
     generate_large_dataset()

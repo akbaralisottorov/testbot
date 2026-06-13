@@ -269,6 +269,11 @@ def create_test(user_id, exam_type='standard', mock_date=None):
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
+        # Ensure user exists in users table to prevent Foreign Key constraint failure
+        cursor.execute(
+            "INSERT OR IGNORE INTO users (user_id, username, full_name) VALUES (?, NULL, ?);",
+            (user_id, f"Foydalanuvchi {user_id}")
+        )
         cursor.execute(
             "INSERT INTO exam_sessions (user_id, exam_type, mock_date) VALUES (?, ?, ?);",
             (user_id, exam_type, mock_date)

@@ -1,13 +1,30 @@
 import asyncio
 import logging
 import sys
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, BaseMiddleware
+from aiogram.types import TelegramObject
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.default import DefaultBotProperties
 
 from config import BOT_TOKEN
 from database import init_db
 from handlers import router as handlers_router
+
+class RegisterUserMiddleware(BaseMiddleware):
+    def __init__(self):
+        super().__init__()
+        self.registered_users = set()
+
+    async def __call__(self, handler, event: TelegramObject, data: dict):
+        user = data.get("event_from_user")
+        if user:
+            if user.id not in self.registered_users:
+                from database import get_user, add_user
+                db_user = get_user(user.id)
+                if not db_user:
+                    add_user(user.id, user.username, user.full_name)
+                self.registered_users.add(user.id)
+        return await handler(event, data)
 
 async def background_timer_checker(bot: Bot, dp: Dispatcher):
     logger = logging.getLogger("timer_checker")
@@ -95,6 +112,9 @@ async def main():
     
     # Dispatcher with MemoryStorage
     dp = Dispatcher(storage=MemoryStorage())
+    
+    # Register RegisterUserMiddleware to auto-register interacting users
+    dp.update.outer_middleware(RegisterUserMiddleware())
     
     # Include combined handlers router
     dp.include_router(handlers_router)
