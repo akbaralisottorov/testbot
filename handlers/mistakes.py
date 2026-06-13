@@ -1,3 +1,4 @@
+import html
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -20,24 +21,24 @@ async def send_mistake_question(message: Message, state: FSMContext, index: int)
     if index >= len(mistakes):
         await state.clear()
         is_admin = message.from_user.id in ADMIN_IDS
-        text = "🎉 **Barcha xato savollarni ko'rib chiqdingiz!**\n\nTo'g'ri javob bergan savollaringiz xatolar ro'yxatidan muvaffaqiyatli o'chirildi."
+        text = "🎉 <b>Barcha xato savollarni ko'rib chiqdingiz!</b>\n\nTo'g'ri javob bergan savollaringiz xatolar ro'yxatidan muvaffaqiyatli o'chirildi."
         if isinstance(message, CallbackQuery):
             await callback_or_msg_ref(message, text, is_admin)
         else:
-            await message.answer(text, reply_markup=get_main_menu(is_admin=is_admin), parse_mode="Markdown")
+            await message.answer(text, reply_markup=get_main_menu(is_admin=is_admin), parse_mode="HTML")
         return
         
     q = mistakes[index]
     has_next = (index + 1) < len(mistakes)
     
     text = (
-        f"🔄 **Xatolar ustida ishlash** | Savol {index + 1} / {len(mistakes)}\n"
-        f"📖 **Fan:** {q['subject']}\n\n"
-        f"{q['question']}\n\n"
-        f"A) {q['option_a']}\n"
-        f"B) {q['option_b']}\n"
-        f"C) {q['option_c']}\n"
-        f"D) {q['option_d']}"
+        f"🔄 <b>Xatolar ustida ishlash</b> | Savol {index + 1} / {len(mistakes)}\n"
+        f"📖 <b>Fan:</b> {html.escape(q['subject'])}\n\n"
+        f"{html.escape(q['question'])}\n\n"
+        f"A) {html.escape(str(q['option_a']))}\n"
+        f"B) {html.escape(str(q['option_b']))}\n"
+        f"C) {html.escape(str(q['option_c']))}\n"
+        f"D) {html.escape(str(q['option_d']))}"
     )
     
     keyboard = get_mistake_review_keyboard(
@@ -47,30 +48,31 @@ async def send_mistake_question(message: Message, state: FSMContext, index: int)
     )
     
     if isinstance(message, CallbackQuery):
-        await message.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
+        await message.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
     else:
-        await message.answer(text, reply_markup=keyboard, parse_mode="Markdown")
+        await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
 
 async def callback_or_msg_ref(callback: CallbackQuery, text: str, is_admin: bool):
     try:
         await callback.message.delete()
     except Exception:
         pass
-    await callback.message.answer(text, reply_markup=get_main_menu(is_admin=is_admin), parse_mode="Markdown")
+    await callback.message.answer(text, reply_markup=get_main_menu(is_admin=is_admin), parse_mode="HTML")
 
-@router.message(Command("retry_wrong_answers") | (F.text == "📓 Xatolar daftari"))
+@router.message(Command("retry_wrong_answers"))
+@router.message(F.text == "📓 Xatolar daftari")
 async def show_notebook_menu(message: Message, state: FSMContext):
     user_id = message.from_user.id
     await state.clear()
     
     count = get_user_mistakes_count(user_id)
     text = (
-        "📓 **Xatolar Daftari (Notebook)**\n\n"
+        "📓 <b>Xatolar Daftari (Notebook)</b>\n\n"
         "Siz imtihon topshirish davomida xato yechgan savollaringiz ushbu daftarga yig'ilib boradi. "
-        f"Hozirda daftaringizda **{count}** ta xato savol bor.\n\n"
+        f"Hozirda daftaringizda <b>{count}</b> ta xato savol bor.\n\n"
         "Quyidagi amallardan birini tanlang:"
     )
-    await message.answer(text, reply_markup=get_notebook_menu_keyboard(has_mistakes=count > 0), parse_mode="Markdown")
+    await message.answer(text, reply_markup=get_notebook_menu_keyboard(has_mistakes=count > 0), parse_mode="HTML")
 
 @router.callback_query(F.data == "m_clear_notebook")
 async def clear_notebook_callback(callback: CallbackQuery, state: FSMContext):
@@ -121,26 +123,26 @@ async def process_mistake_answer(callback: CallbackQuery, state: FSMContext):
     correct = q['correct_option']
     is_correct = option.upper() == correct.upper()
     
-    explanation_text = q['explanation'] if q['explanation'] else "Ushbu savol uchun izoh mavjud emas."
+    explanation_text = html.escape(q['explanation']) if q['explanation'] else "Ushbu savol uchun izoh mavjud emas."
     
     if is_correct:
         remove_mistake(user_id, question_id)
-        status_text = "✅ **To'g'ri!** 🎉\nSavol xatolar ro'yxatidan o'chirildi."
+        status_text = "✅ <b>To'g'ri!</b> 🎉\nSavol xatolar ro'yxatidan o'chirildi."
         await callback.answer("To'g'ri javob!", show_alert=False)
     else:
-        status_text = f"❌ **Noto'g'ri!**\nTo'g'ri javob: **{correct}** (Siz: {option})"
+        status_text = f"❌ <b>Noto'g'ri!</b>\nTo'g'ri javob: <b>{html.escape(correct)}</b> (Siz: {html.escape(option)})"
         await callback.answer("Noto'g'ri javob.", show_alert=False)
         
     text = (
-        f"🔄 **Xatolar ustida ishlash** | Savol {index + 1} / {len(mistakes)}\n"
-        f"📖 **Fan:** {q['subject']}\n\n"
-        f"{q['question']}\n\n"
-        f"A) {q['option_a']}\n"
-        f"B) {q['option_b']}\n"
-        f"C) {q['option_c']}\n"
-        f"D) {q['option_d']}\n\n"
+        f"🔄 <b>Xatolar ustida ishlash</b> | Savol {index + 1} / {len(mistakes)}\n"
+        f"📖 <b>Fan:</b> {html.escape(q['subject'])}\n\n"
+        f"{html.escape(q['question'])}\n\n"
+        f"A) {html.escape(str(q['option_a']))}\n"
+        f"B) {html.escape(str(q['option_b']))}\n"
+        f"C) {html.escape(str(q['option_c']))}\n"
+        f"D) {html.escape(str(q['option_d']))}\n\n"
         f"Natija: {status_text}\n\n"
-        f"💡 **Izoh:**\n{explanation_text}"
+        f"💡 <b>Izoh:</b>\n{explanation_text}"
     )
     
     has_next = (index + 1) < len(mistakes)
@@ -151,7 +153,7 @@ async def process_mistake_answer(callback: CallbackQuery, state: FSMContext):
         is_correct=is_correct
     )
     
-    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 # --- Next Mistake Question Callback ---
 @router.callback_query(MistakeStates.practicing, F.data == "m_nxt")
@@ -179,3 +181,4 @@ async def exit_mistakes_practice(callback: CallbackQuery, state: FSMContext):
         "Asosiy menyuga qaytdingiz:",
         reply_markup=get_main_menu(is_admin=is_admin)
     )
+

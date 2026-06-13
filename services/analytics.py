@@ -1,5 +1,6 @@
 import os
 import logging
+import html
 import matplotlib
 matplotlib.use('Agg')  # Set non-interactive backend for server-side generation
 import matplotlib.pyplot as plt
@@ -22,7 +23,7 @@ def generate_analytics_report(user_id: int) -> dict:
         return {
             "has_chart": False,
             "report_text": (
-                "📊 **Batafsil Analitika Hisoboti**\n\n"
+                "📊 <b>Batafsil Analitika Hisoboti</b>\n\n"
                 "Siz hali biron-bir test variantini yakunlamagansiz.\n"
                 "Tahlil va progress grafigini ko'rish uchun oldin kamida bitta test topshiring."
             )
@@ -48,10 +49,10 @@ def generate_analytics_report(user_id: int) -> dict:
         pct = int((correct / answered) * 100) if answered > 0 else 0
         
         subjects_text += (
-            f"🔹 **{subj}:**\n"
-            f"   - Jami yechilgan: `{answered}` ta\n"
-            f"   - To'g'ri: `{correct}` | Noto'g'ri: `{wrong}`\n"
-            f"   - Samaradorlik: `{pct}%`\n\n"
+            f"🔹 <b>{html.escape(subj)}:</b>\n"
+            f"   - Jami yechilgan: <code>{answered}</code> ta\n"
+            f"   - To'g'ri: <code>{correct}</code> | Noto'g'ri: <code>{wrong}</code>\n"
+            f"   - Samaradorlik: <code>{pct}%</code>\n\n"
         )
         
         # Only determine weak/strong subjects among attempted ones
@@ -62,22 +63,22 @@ def generate_analytics_report(user_id: int) -> dict:
             if pct > strong_pct:
                 strong_pct = pct
                 strong_subject = subj
-                
-    weak_display = f"⚠️ **E'tibor berish kerak bo'lgan fan:** {weak_subject} ({weak_pct}%)" if weak_subject else "⚠️ **E'tibor berish kerak bo'lgan fan:** Aniqlanmadi"
-    strong_display = f"🌟 **Eng yaxshi o'zlashtirilgan fan:** {strong_subject} ({strong_pct}%)" if strong_subject else "🌟 **Eng yaxshi o'zlashtirilgan fan:** Aniqlanmadi"
+                 
+    weak_display = f"⚠️ <b>E'tibor berish kerak bo'lgan fan:</b> {html.escape(weak_subject)} ({weak_pct}%)" if weak_subject else "⚠️ <b>E'tibor berish kerak bo'lgan fan:</b> Aniqlanmadi"
+    strong_display = f"🌟 <b>Eng yaxshi o'zlashtirilgan fan:</b> {html.escape(strong_subject)} ({strong_pct}%)" if strong_subject else "🌟 <b>Eng yaxshi o'zlashtirilgan fan:</b> Aniqlanmadi"
     
     report_text = (
-        "📊 **Advanced Analytics Report**\n\n"
-        f"🏆 Yakunlangan variantlar: `{stats['exams_completed']}` ta\n"
-        f"🎯 Jami yechilgan savollar: `{total_answered}` ta\n"
-        f"✅ To'g'ri javoblar: `{total_correct}` ta\n"
-        f"❌ Noto'g'ri javoblar: `{total_wrong}` ta\n"
-        f"🎯 Umumiy samaradorlik ko'rsatkichi: `{overall_percentage}%`\n\n"
-        "📚 **Fanlar kesimidagi tahlil:**\n"
+        "📊 <b>Advanced Analytics Report</b>\n\n"
+        f"🏆 Yakunlangan variantlar: <code>{stats['exams_completed']}</code> ta\n"
+        f"🎯 Jami yechilgan savollar: <code>{total_answered}</code> ta\n"
+        f"✅ To'g'ri javoblar: <code>{total_correct}</code> ta\n"
+        f"❌ Noto'g'ri javoblar: <code>{total_wrong}</code> ta\n"
+        f"🎯 Umumiy samaradorlik ko'rsatkichi: <code>{overall_percentage}%</code>\n\n"
+        "📚 <b>Fanlar kesimidagi tahlil:</b>\n"
         f"{subjects_text}"
         f"{strong_display}\n"
         f"{weak_display}\n\n"
-        "📈 *Quyida oxirgi 10 ta yechilgan variant bo'yicha progress grafigingiz ilova qilindi:* "
+        "📈 <i>Quyida oxirgi 10 ta yechilgan variant bo'yicha progress grafigingiz ilova qilindi:</i> "
     )
     
     # Generate progress chart image
@@ -104,7 +105,7 @@ def generate_analytics_report(user_id: int) -> dict:
             # Add annotations for each data point
             for x, y in zip(attempts_indices, percentages):
                 plt.annotate(f"{y}%", (x, y), textcoords="offset points", xytext=(0,8), ha='center', fontsize=9, fontweight='bold', color='#1A237E')
-                
+                 
             plt.tight_layout()
             plt.savefig(chart_path, dpi=150)
             plt.close()
@@ -112,9 +113,10 @@ def generate_analytics_report(user_id: int) -> dict:
         except Exception as e:
             logger.exception("Matplotlib plotting encountered an exception")
             has_chart = False
-            
+             
     return {
         "has_chart": has_chart,
         "chart_path": chart_path if has_chart else None,
         "report_text": report_text
     }
+

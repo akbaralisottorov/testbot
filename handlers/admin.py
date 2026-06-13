@@ -1,5 +1,6 @@
 import os
 import logging
+import html
 import pandas as pd
 from aiogram import Router, F, Bot
 from aiogram.fsm.context import FSMContext
@@ -82,9 +83,9 @@ def generate_template_file(file_path: str):
 async def return_to_admin(message: Message, state: FSMContext, text="Muvaffaqiyatli bajarildi!"):
     await state.clear()
     await message.answer(
-        f"✅ {text}\n\n⚙️ **Admin Panel Menu:**",
+        f"✅ {text}\n\n⚙️ <b>Admin Panel Menu:</b>",
         reply_markup=get_admin_keyboard(),
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
 # --- Admin Panel Entry ---
@@ -96,10 +97,10 @@ async def show_admin_panel(message: Message, state: FSMContext):
         
     await state.clear()
     await message.answer(
-        "⚙️ **Admin Panel**\n\nLoyihani boshqarish va testlar yuklash menyusiga xush kelibsiz. "
+        "⚙️ <b>Admin Panel</b>\n\nLoyihani boshqarish va testlar yuklash menyusiga xush kelibsiz. "
         "Quyidagi amallardan birini tanlang:",
         reply_markup=get_admin_keyboard(),
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
 # --- Statistics Handler ---
@@ -120,24 +121,24 @@ async def admin_stats_callback(callback: CallbackQuery):
     subj_breakdown = ""
     for s in subjects:
         s_cnt = get_subject_questions_count(s)
-        subj_breakdown += f"• **{s}:** `{s_cnt}` ta savol\n"
+        subj_breakdown += f"• <b>{html.escape(s)}:</b> <code>{s_cnt}</code> ta savol\n"
         
     if not subj_breakdown:
-        subj_breakdown = "_Hozircha savollar mavjud emas._\n"
+        subj_breakdown = "<i>Hozircha savollar mavjud emas.</i>\n"
         
     stats_text = (
-        "📊 **Bot Statistikasi:**\n\n"
-        f"👤 Ro'yxatdan o'tgan foydalanuvchilar: `{users_cnt}` ta\n"
-        f"🏆 Jami yechilgan variantlar: `{tests_cnt}` ta\n"
-        f"❓ Jami bazadagi savollar: `{qs_cnt}` ta\n\n"
-        f"📚 **Fanlar bo'yicha savollar:**\n{subj_breakdown}\n"
+        "📊 <b>Bot Statistikasi:</b>\n\n"
+        f"👤 Ro'yxatdan o'tgan foydalanuvchilar: <code>{users_cnt}</code> ta\n"
+        f"🏆 Jami yechilgan variantlar: <code>{tests_cnt}</code> ta\n"
+        f"❓ Jami bazadagi savollar: <code>{qs_cnt}</code> ta\n\n"
+        f"📚 <b>Fanlar bo'yicha savollar:</b>\n{subj_breakdown}\n"
     )
     
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⚙️ Admin panelga qaytish", callback_data="back_admin")]
     ])
     
-    await callback.message.edit_text(stats_text, reply_markup=kb, parse_mode="Markdown")
+    await callback.message.edit_text(stats_text, reply_markup=kb, parse_mode="HTML")
 
 # --- Template Downloader ---
 @router.callback_query(F.data == "admin_template")
@@ -155,11 +156,11 @@ async def admin_template_callback(callback: CallbackQuery):
     await callback.message.answer_document(
         doc,
         caption=(
-            "📤 **Excel Shablon Fayli**\n\n"
+            "📤 <b>Excel Shablon Fayli</b>\n\n"
             "Savollarni botga yuklash uchun ushbu shablon faylidan foydalaning. "
             "Ustunlar tartibi va nomlarini o'zgartirmang!"
         ),
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
 # --- Upload Excel Module ---
@@ -194,11 +195,11 @@ async def process_import_mode(callback: CallbackQuery, state: FSMContext):
     
     mode_text = "Mavjudlariga qo'shish" if mode == 'append' else "Bazani tozalab qayta yuklash"
     await callback.message.edit_text(
-        f"📥 **Fayl yuborish kutilmoqda...**\n\n"
-        f"Tanlangan rejim: **{mode_text}**\n\n"
+        f"📥 <b>Fayl yuborish kutilmoqda...</b>\n\n"
+        f"Tanlangan rejim: <b>{html.escape(mode_text)}</b>\n\n"
         "Iltimos, test savollari yozilgan Excel (.xlsx) faylini yuboring.\n"
         "Jarayonni bekor qilish uchun /cancel deb yozing.",
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
 @router.message(AdminStates.waiting_for_file, F.document)
@@ -223,18 +224,18 @@ async def process_excel_upload(message: Message, state: FSMContext, bot: Bot):
         
         if result['success']:
             res_text = (
-                "✅ **Testlar muvaffaqiyatli import qilindi!**\n\n"
-                f"📥 Baza yuklandi: `{result['imported']}` ta yangi savol.\n"
-                f"⚠️ O'tkazib yuborildi: `{result['skipped']}` ta qator.\n"
-                f"Takrorlangan (fayl): `{result['duplicate_sheet']}` | (baza): `{result['duplicate_db']}`"
+                "✅ <b>Testlar muvaffaqiyatli import qilindi!</b>\n\n"
+                f"📥 Baza yuklandi: <code>{result['imported']}</code> ta yangi savol.\n"
+                f"⚠️ O'tkazib yuborildi: <code>{result['skipped']}</code> ta qator.\n"
+                f"Takrorlangan (fayl): <code>{result['duplicate_sheet']}</code> | (baza): <code>{result['duplicate_db']}</code>"
             )
             if result['errors']:
                 err_details = "\n".join(result['errors'])
-                res_text += f"\n\n**Xatolik tafsilotlari:**\n`{err_details}`"
+                res_text += f"\n\n<b>Xatolik tafsilotlari:</b>\n<code>{html.escape(err_details)}</code>"
         else:
-            res_text = f"❌ **Import qilishda xatolik yuz berdi:**\n{result['message']}"
+            res_text = f"❌ <b>Import qilishda xatolik yuz berdi:</b>\n{html.escape(result['message'])}"
             
-        await status_msg.edit_text(res_text, parse_mode="Markdown")
+        await status_msg.edit_text(res_text, parse_mode="HTML")
     except Exception as e:
         await status_msg.edit_text(f"❌ Faylni qayta ishlashda xatolik: {str(e)}")
     finally:
@@ -532,8 +533,8 @@ async def process_broadcast(message: Message, state: FSMContext, bot: Bot):
         message, 
         state, 
         f"Xabar tarqatish yakunlandi:\n\n"
-        f"✅ Muvaffaqiyatli: `{success_cnt}` ta\n"
-        f"❌ Muammolar (bloklangan): `{failed_cnt}` ta"
+        f"✅ Muvaffaqiyatli: <code>{success_cnt}</code> ta\n"
+        f"❌ Muammolar (bloklangan): <code>{failed_cnt}</code> ta"
     )
 
 # --- Export Results Handler ---
@@ -573,8 +574,8 @@ async def admin_export_callback(callback: CallbackQuery, bot: Bot):
         doc = FSInputFile(export_path, filename="imtihon_natijalari.xlsx")
         await callback.message.answer_document(
             doc,
-            caption="📊 **Tizimdagi jami yakunlangan imtihon natijalari eksporti (Excel)**",
-            parse_mode="Markdown"
+            caption="📊 <b>Tizimdagi jami yakunlangan imtihon natijalari eksporti (Excel)</b>",
+            parse_mode="HTML"
         )
     except Exception as e:
         await callback.message.answer(f"❌ Eksport qilishda xato: {str(e)}")
@@ -592,10 +593,10 @@ async def back_admin_callback(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.answer()
     await callback.message.edit_text(
-        "⚙️ **Admin Panel**\n\nLoyihani boshqarish va testlar yuklash menyusiga xush kelibsiz. "
+        "⚙️ <b>Admin Panel</b>\n\nLoyihani boshqarish va testlar yuklash menyusiga xush kelibsiz. "
         "Quyidagi amallardan birini tanlang:",
         reply_markup=get_admin_keyboard(),
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
 # --- Cancel handler for admin flows ---

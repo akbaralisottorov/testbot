@@ -56,13 +56,13 @@ async def background_timer_checker(bot: Bot, dp: Dispatcher):
                     percentage = int((results['correct'] / results['total']) * 100) if results['total'] > 0 else 0
                     
                     summary_text = (
-                        "⏱ **Imtihon topshirish vaqtingiz (90 daqiqa) tugadi!**\n\n"
+                        "⏱ <b>Imtihon topshirish vaqtingiz (90 daqiqa) tugadi!</b>\n\n"
                         "Variantingiz avtomatik ravishda yakunlandi va topshirildi.\n\n"
-                        f"📊 **Natija:** {results['correct']} / {results['total']} ({percentage}%)"
+                        f"📊 <b>Natija:</b> {results['correct']} / {results['total']} ({percentage}%)"
                     )
                     
                     try:
-                        await bot.send_message(chat_id=u_id, text=summary_text, parse_mode="Markdown")
+                        await bot.send_message(chat_id=u_id, text=summary_text, parse_mode="HTML")
                     except Exception as msg_e:
                         logger.warning(f"Could not send notification to user {u_id}: {msg_e}")
                         

@@ -1,12 +1,16 @@
 import os
+import random
 import pandas as pd
 from config import DATA_DIR
 
 def generate_large_dataset():
+    # Set seed for reproducible generation but randomly distributed answers
+    random.seed(42)
+    
     subjects = [
-        ("Matematika", "savol", "A", "B", "C", "D", "B", "Matematik tushuntirish"),
-        ("Ona tili", "ona tili test savoli", "To'g'ri variant", "Noto'g'ri 1", "Noto'g'ri 2", "Noto'g'ri 3", "A", "Ona tili grammatikasi izohi"),
-        ("Tarix", "tarixiy voqea haqida savol", "To'g'ri javob", "Xato 1", "Xato 2", "Xato 3", "A", "Tarixiy manba va dalil izohi")
+        ("Matematika", "savol", "To'g'ri Matematika javobi", "Xato Matematika A", "Xato Matematika B", "Xato Matematika C"),
+        ("Ona tili", "ona tili test savoli", "To'g'ri Ona tili javobi", "Xato Ona tili A", "Xato Ona tili B", "Xato Ona tili C"),
+        ("Tarix", "tarixiy voqea haqida savol", "To'g'ri Tarix javobi", "Xato Tarix A", "Xato Tarix B", "Xato Tarix C")
     ]
     
     data = {
@@ -21,16 +25,31 @@ def generate_large_dataset():
     }
     
     # Generate 620 questions for each of the 3 subjects
-    for subj_name, q_prefix, opt_a, opt_b, opt_c, opt_d, correct, exp_prefix in subjects:
+    for subj_name, q_prefix, correct_val, wrong_1, wrong_2, wrong_3 in subjects:
         for num in range(1, 621):
             data['subject'].append(subj_name)
             data['question'].append(f"{subj_name} fani bo'yicha {num}-savol: Ushbu savol test tizimini sinash uchun yaratilgan.")
-            data['option_a'].append(f"{opt_a} ({num})")
-            data['option_b'].append(f"{opt_b} ({num})")
-            data['option_c'].append(f"{opt_c} ({num})")
-            data['option_d'].append(f"{opt_d} ({num})")
-            data['correct_answer'].append(correct)
-            data['explanation'].append(f"{exp_prefix} {num}: To'g'ri variant - {correct}.")
+            
+            # Put the correct option and wrong options in a list
+            options = [correct_val, wrong_1, wrong_2, wrong_3]
+            
+            # Shuffle choices randomly
+            shuffled_indices = [0, 1, 2, 3]
+            random.shuffle(shuffled_indices)
+            
+            shuffled_options = [options[idx] for idx in shuffled_indices]
+            
+            # Find the new index of the correct answer (which is index 0 in the original options list)
+            correct_idx = shuffled_indices.index(0)
+            correct_harf = ['A', 'B', 'C', 'D'][correct_idx]
+            
+            data['option_a'].append(f"{shuffled_options[0]} ({num})")
+            data['option_b'].append(f"{shuffled_options[1]} ({num})")
+            data['option_c'].append(f"{shuffled_options[2]} ({num})")
+            data['option_d'].append(f"{shuffled_options[3]} ({num})")
+            
+            data['correct_answer'].append(correct_harf)
+            data['explanation'].append(f"Izoh {num}: To'g'ri variant - {correct_harf}.")
             
     df = pd.DataFrame(data)
     

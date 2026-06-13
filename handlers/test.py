@@ -1,4 +1,5 @@
 import datetime
+import html
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -60,18 +61,18 @@ async def send_question_message(message: Message, test_id: int, order: int, user
         elapsed = datetime.datetime.utcnow() - started
         remaining_sec = max(0, 90 * 60 - int(elapsed.total_seconds()))
         mins, secs = divmod(remaining_sec, 60)
-        timer_str = f"⏱ **Qolgan vaqt:** {mins:02d}:{secs:02d}\n\n"
+        timer_str = f"⏱ <b>Qolgan vaqt:</b> {mins:02d}:{secs:02d}\n\n"
         
     text = (
-        f"📖 **Fan:** {q_data['subject']}\n"
-        f"❓ **Savol:** {order} / 50\n\n"
+        f"📖 <b>Fan:</b> {html.escape(q_data['subject'])}\n"
+        f"❓ <b>Savol:</b> {order} / 50\n\n"
         f"{timer_str}"
-        f"{q_data['question']}\n\n"
-        f"A) {q_data['option_a']}\n"
-        f"B) {q_data['option_b']}\n"
-        f"C) {q_data['option_c']}\n"
-        f"D) {q_data['option_d']}\n\n"
-        f"📊 **Jarayon:** {progress}"
+        f"{html.escape(q_data['question'])}\n\n"
+        f"A) {html.escape(str(q_data['option_a']))}\n"
+        f"B) {html.escape(str(q_data['option_b']))}\n"
+        f"C) {html.escape(str(q_data['option_c']))}\n"
+        f"D) {html.escape(str(q_data['option_d']))}\n\n"
+        f"📊 <b>Jarayon:</b> {html.escape(progress)}"
     )
     
     keyboard = get_test_keyboard(
@@ -82,9 +83,9 @@ async def send_question_message(message: Message, test_id: int, order: int, user
     
     # Check if we are editing an existing message or sending a new one
     if isinstance(message, CallbackQuery):
-        await message.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
+        await message.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
     else:
-        await message.answer(text, reply_markup=keyboard, parse_mode="Markdown")
+        await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
 
 # --- Helper to check timer expiration ---
 async def is_test_expired(callback: CallbackQuery, state: FSMContext) -> bool:
@@ -104,30 +105,31 @@ async def is_test_expired(callback: CallbackQuery, state: FSMContext) -> bool:
             subjects_breakdown = ""
             for s_res in results['breakdown']:
                 s_pct = int((s_res['correct'] / s_res['total']) * 100) if s_res['total'] > 0 else 0
-                subjects_breakdown += f"• **{s_res['subject']}:** {s_res['correct']}/{s_res['total']} ta ({s_pct}%)\n"
+                subjects_breakdown += f"• <b>{html.escape(s_res['subject'])}:</b> {s_res['correct']}/{s_res['total']} ta ({s_pct}%)\n"
                 
             summary_text = (
-                "⏱ **Vaqtingiz tugadi!**\n\n"
+                "⏱ <b>Vaqtingiz tugadi!</b>\n\n"
                 "Imtihon avtomatik ravishda yakunlandi va topshirildi.\n\n"
-                "📈 **Natijalar:**\n"
-                f"• Jami savollar: `{results['total']}` ta\n"
-                f"• To'g'ri javoblar: `{results['correct']}` ta\n"
-                f"• Noto'g'ri javoblar: `{results['incorrect']}` ta\n"
-                f"• Belgilanmagan: `{results['unanswered']}` ta\n\n"
-                f"📚 **Fanlar kesimida:**\n{subjects_breakdown}\n"
-                f"🎯 **Umumiy natija:** `{percentage}%`"
+                "📈 <b>Natijalar:</b>\n"
+                f"• Jami savollar: <code>{results['total']}</code> ta\n"
+                f"• To'g'ri javoblar: <code>{results['correct']}</code> ta\n"
+                f"• Noto'g'ri javoblar: <code>{results['incorrect']}</code> ta\n"
+                f"• Belgilanmagan: <code>{results['unanswered']}</code> ta\n\n"
+                f"📚 <b>Fanlar kesimida:</b>\n{subjects_breakdown}\n"
+                f"🎯 <b>Umumiy natija:</b> <code>{percentage}%</code>"
             )
             await state.update_data(analysis_test_id=active_test['id'])
             await callback.message.edit_text(
                 summary_text,
                 reply_markup=get_test_finished_keyboard(),
-                parse_mode="Markdown"
+                parse_mode="HTML"
             )
             return True
     return False
 
 # --- Start Test Command ---
-@router.message(Command("start_exam") | (F.text == "📝 Standart Imtihon"))
+@router.message(Command("start_exam"))
+@router.message(F.text == "📝 Standart Imtihon")
 async def start_test_handler(message: Message, state: FSMContext):
     user_id = message.from_user.id
     
@@ -194,9 +196,9 @@ async def start_new_test_flow(message: Message, state: FSMContext):
     
     kb = get_subject_selection_keyboard(valid_subjects, step=1, selected=[])
     await message.answer(
-        "📚 **1-fanni tanlang** (Ushbu fandan 16 ta savol tushadi):",
+        "📚 <b>1-fanni tanlang</b> (Ushbu fandan 16 ta savol tushadi):",
         reply_markup=kb,
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
 # --- Resume & Delete Actions ---
@@ -246,9 +248,9 @@ async def select_subject_callback(callback: CallbackQuery, state: FSMContext):
         limit = 17 # Step 2 and 3 get 17 questions
         kb = get_subject_selection_keyboard(subjects_pool, step=next_step, selected=selected_subjects)
         await callback.message.edit_text(
-            f"📚 **{next_step}-fanni tanlang** (Ushbu fandan {limit} ta savol tushadi):",
+            f"📚 <b>{next_step}-fanni tanlang</b> (Ushbu fandan {limit} ta savol tushadi):",
             reply_markup=kb,
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
     else:
         # Confirmed
@@ -257,11 +259,12 @@ async def select_subject_callback(callback: CallbackQuery, state: FSMContext):
             [InlineKeyboardButton(text="🚀 Testni boshlash", callback_data="start_test_now")],
             [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="go_home")]
         ])
-        subjects_str = "\n".join([f"{idx+1}. {s} ({'16' if idx==0 else '17'} ta savol)" for idx, s in enumerate(selected_subjects)])
+        subjects_str = "\n".join([f"{idx+1}. {html.escape(s)} ({'16' if idx==0 else '17'} ta savol)" for idx, s in enumerate(selected_subjects)])
         await callback.message.edit_text(
             f"Siz tanlagan fanlar:\n\n{subjects_str}\n\n"
             "Testni boshlashga tayyormisiz?",
-            reply_markup=kb
+            reply_markup=kb,
+            parse_mode="HTML"
         )
 
 # --- Start Test Now Callback ---
@@ -375,18 +378,18 @@ async def finish_test_callback(callback: CallbackQuery, state: FSMContext):
     subjects_breakdown = ""
     for s_res in results['breakdown']:
         s_pct = int((s_res['correct'] / s_res['total']) * 100) if s_res['total'] > 0 else 0
-        subjects_breakdown += f"• **{s_res['subject']}:** {s_res['correct']}/{s_res['total']} ta ({s_pct}%)\n"
+        subjects_breakdown += f"• <b>{html.escape(s_res['subject'])}:</b> {s_res['correct']}/{s_res['total']} ta ({s_pct}%)\n"
         
     summary_text = (
-        "🏁 **Test yakunlandi!**\n\n"
-        f"⏱ **Sarflangan vaqt:** {duration_str}\n\n"
-        "📈 **Natijalar:**\n"
-        f"• Jami savollar: `{results['total']}` ta\n"
-        f"• To'g'ri javoblar: `{results['correct']}` ta\n"
-        f"• Noto'g'ri javoblar: `{results['incorrect']}` ta\n"
-        f"• Belgilanmagan: `{results['unanswered']}` ta\n\n"
-        f"📚 **Fanlar kesimida:**\n{subjects_breakdown}\n"
-        f"🎯 **Umumiy natija:** `{percentage}%`"
+        "🏁 <b>Test yakunlandi!</b>\n\n"
+        f"⏱ <b>Sarflangan vaqt:</b> {html.escape(duration_str)}\n\n"
+        "📈 <b>Natijalar:</b>\n"
+        f"• Jami savollar: <code>{results['total']}</code> ta\n"
+        f"• To'g'ri javoblar: <code>{results['correct']}</code> ta\n"
+        f"• Noto'g'ri javoblar: <code>{results['incorrect']}</code> ta\n"
+        f"• Belgilanmagan: <code>{results['unanswered']}</code> ta\n\n"
+        f"📚 <b>Fanlar kesimida:</b>\n{subjects_breakdown}\n"
+        f"🎯 <b>Umumiy natija:</b> <code>{percentage}%</code>"
     )
     
     await state.clear()
@@ -396,7 +399,7 @@ async def finish_test_callback(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         summary_text,
         reply_markup=get_test_finished_keyboard(),
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
 # --- Analysis Navigation Callback ---
@@ -421,31 +424,31 @@ async def process_analysis_callback(callback: CallbackQuery, state: FSMContext):
     correct_ans = q_data['correct_option']
     
     if user_ans is None:
-        status_text = "❌ **Belgilanmagan**"
+        status_text = "❌ <b>Belgilanmagan</b>"
     elif user_ans == correct_ans:
-        status_text = "✅ **To'g'ri**"
+        status_text = "✅ <b>To'g'ri</b>"
     else:
-        status_text = f"❌ **Noto'g'ri** (Siz: {user_ans})"
+        status_text = f"❌ <b>Noto'g'ri</b> (Siz: {html.escape(user_ans)})"
         
-    explanation_text = q_data['explanation'] if q_data['explanation'] else "Ushbu savol uchun izoh mavjud emas."
+    explanation_text = html.escape(q_data['explanation']) if q_data['explanation'] else "Ushbu savol uchun izoh mavjud emas."
     
     text = (
-        f"📊 **Xatolar tahlili** | Savol {order} / 50\n"
-        f"📖 **Fan:** {q_data['subject']}\n\n"
-        f"{q_data['question']}\n\n"
-        f"A) {q_data['option_a']}\n"
-        f"B) {q_data['option_b']}\n"
-        f"C) {q_data['option_c']}\n"
-        f"D) {q_data['option_d']}\n\n"
-        f"👤 Sizning javobingiz: {user_ans or 'Belgilanmagan'}\n"
-        f"🔑 To'g'ri javob: **{correct_ans}** ({status_text})\n\n"
-        f"💡 **Izoh:**\n{explanation_text}"
+        f"📊 <b>Xatolar tahlili</b> | Savol {order} / 50\n"
+        f"📖 <b>Fan:</b> {html.escape(q_data['subject'])}\n\n"
+        f"{html.escape(q_data['question'])}\n\n"
+        f"A) {html.escape(str(q_data['option_a']))}\n"
+        f"B) {html.escape(str(q_data['option_b']))}\n"
+        f"C) {html.escape(str(q_data['option_c']))}\n"
+        f"D) {html.escape(str(q_data['option_d']))}\n\n"
+        f"👤 Sizning javobingiz: {html.escape(user_ans or 'Belgilanmagan')}\n"
+        f"🔑 To'g'ri javob: <b>{html.escape(correct_ans)}</b> ({status_text})\n\n"
+        f"💡 <b>Izoh:</b>\n{explanation_text}"
     )
     
     await callback.message.edit_text(
         text,
         reply_markup=get_analysis_keyboard(order, 50),
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
 @router.callback_query(F.data == "back_results")
@@ -470,24 +473,24 @@ async def back_to_results_callback(callback: CallbackQuery, state: FSMContext):
     subjects_breakdown = ""
     for s_res in results['breakdown']:
         s_pct = int((s_res['correct'] / s_res['total']) * 100) if s_res['total'] > 0 else 0
-        subjects_breakdown += f"• **{s_res['subject']}:** {s_res['correct']}/{s_res['total']} ta ({s_pct}%)\n"
+        subjects_breakdown += f"• <b>{html.escape(s_res['subject'])}:</b> {s_res['correct']}/{s_res['total']} ta ({s_pct}%)\n"
         
     summary_text = (
-        "🏁 **Test yakunlandi!**\n\n"
-        f"⏱ **Sarflangan vaqt:** {duration_str}\n\n"
-        "📈 **Natijalar:**\n"
-        f"• Jami savollar: `{results['total']}` ta\n"
-        f"• To'g'ri javoblar: `{results['correct']}` ta\n"
-        f"• Noto'g'ri javoblar: `{results['incorrect']}` ta\n"
-        f"• Belgilanmagan: `{results['unanswered']}` ta\n\n"
-        f"📚 **Fanlar kesimida:**\n{subjects_breakdown}\n"
-        f"🎯 **Umumiy natija:** `{percentage}%`"
+        "🏁 <b>Test yakunlandi!</b>\n\n"
+        f"⏱ <b>Sarflangan vaqt:</b> {html.escape(duration_str)}\n\n"
+        "📈 <b>Natijalar:</b>\n"
+        f"• Jami savollar: <code>{results['total']}</code> ta\n"
+        f"• To'g'ri javoblar: <code>{results['correct']}</code> ta\n"
+        f"• Noto'g'ri javoblar: <code>{results['incorrect']}</code> ta\n"
+        f"• Belgilanmagan: <code>{results['unanswered']}</code> ta\n\n"
+        f"📚 <b>Fanlar kesimida:</b>\n{subjects_breakdown}\n"
+        f"🎯 <b>Umumiy natija:</b> <code>{percentage}%</code>"
     )
     
     await callback.message.edit_text(
         summary_text,
         reply_markup=get_test_finished_keyboard(),
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
 # --- Start New Test Callback ---
@@ -497,7 +500,8 @@ async def start_new_test_callback(callback: CallbackQuery, state: FSMContext):
     await start_new_test_flow(callback.message, state)
 
 # --- Kunlik Mock Exam Handler ---
-@router.message(Command("mock") | (F.text == "🏆 Kunlik Mock"))
+@router.message(Command("mock"))
+@router.message(F.text == "🏆 Kunlik Mock")
 async def start_mock_exam_handler(message: Message, state: FSMContext):
     user_id = message.from_user.id
     today_str = datetime.date.today().isoformat()
@@ -512,15 +516,15 @@ async def start_mock_exam_handler(message: Message, state: FSMContext):
                 medals = ["🥇", "🥈", "🥉", "4.", "5."]
                 medal = medals[idx] if idx < len(medals) else f"{idx+1}."
                 duration_formatted = f"{l['duration_sec'] // 60}m {l['duration_sec'] % 60}s"
-                leaders_str += f"{medal} {l['full_name']} - {l['correct_count']}/50 ({duration_formatted})\n"
+                leaders_str += f"{medal} {html.escape(l['full_name'] or '')} - {l['correct_count']}/50 ({duration_formatted})\n"
         
-        leaderboard_note = f"\n\n🏆 **Top 5 Natijalar:**\n{leaders_str}" if leaders_str else "\n\nBugungi mock natijalari hali e'lon qilinmadi."
+        leaderboard_note = f"\n\n🏆 <b>Top 5 Natijalar:</b>\n{leaders_str}" if leaders_str else "\n\nBugungi mock natijalari hali e'lon qilinmadi."
         
         await message.answer(
             f"❌ Siz bugungi Kunlik Mock imtihonini topshirib bo'lgansiz. "
             "Kunlik Mock imtihonini kuniga faqat 1 marta topshirish mumkin."
             f"{leaderboard_note}",
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
         return
         
