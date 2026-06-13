@@ -29,16 +29,29 @@ async def send_mistake_question(message: Message, state: FSMContext, index: int)
         return
         
     q = mistakes[index]
+    user_id = message.from_user.id
     has_next = (index + 1) < len(mistakes)
+    
+    # Shuffle options deterministically
+    from services.question_helper import prepare_question
+    q_dict = {
+        "question": q['question'],
+        "A": q['option_a'],
+        "B": q['option_b'],
+        "C": q['option_c'],
+        "D": q['option_d'],
+        "correct": q['correct_option']
+    }
+    shuffled_q = prepare_question(q_dict, session_id=user_id, question_order=q['question_id'])
     
     text = (
         f"🔄 <b>Xatolar ustida ishlash</b> | Savol {index + 1} / {len(mistakes)}\n"
         f"📖 <b>Fan:</b> {html.escape(q['subject'])}\n\n"
-        f"{html.escape(q['question'])}\n\n"
-        f"A) {html.escape(str(q['option_a']))}\n"
-        f"B) {html.escape(str(q['option_b']))}\n"
-        f"C) {html.escape(str(q['option_c']))}\n"
-        f"D) {html.escape(str(q['option_d']))}"
+        f"{html.escape(shuffled_q['question'])}\n\n"
+        f"A) {html.escape(str(shuffled_q['A']))}\n"
+        f"B) {html.escape(str(shuffled_q['B']))}\n"
+        f"C) {html.escape(str(shuffled_q['C']))}\n"
+        f"D) {html.escape(str(shuffled_q['D']))}"
     )
     
     keyboard = get_mistake_review_keyboard(
@@ -120,8 +133,21 @@ async def process_mistake_answer(callback: CallbackQuery, state: FSMContext):
         return
         
     q = mistakes[index]
-    correct = q['correct_option']
-    is_correct = option.upper() == correct.upper()
+    
+    # Reconstruct the deterministic shuffle
+    from services.question_helper import prepare_question, check_answer
+    q_dict = {
+        "question": q['question'],
+        "A": q['option_a'],
+        "B": q['option_b'],
+        "C": q['option_c'],
+        "D": q['option_d'],
+        "correct": q['correct_option']
+    }
+    shuffled_q = prepare_question(q_dict, session_id=user_id, question_order=q['question_id'])
+    
+    correct = shuffled_q['correct']
+    is_correct = check_answer(option, correct)
     
     explanation_text = html.escape(q['explanation']) if q['explanation'] else "Ushbu savol uchun izoh mavjud emas."
     
@@ -136,11 +162,11 @@ async def process_mistake_answer(callback: CallbackQuery, state: FSMContext):
     text = (
         f"🔄 <b>Xatolar ustida ishlash</b> | Savol {index + 1} / {len(mistakes)}\n"
         f"📖 <b>Fan:</b> {html.escape(q['subject'])}\n\n"
-        f"{html.escape(q['question'])}\n\n"
-        f"A) {html.escape(str(q['option_a']))}\n"
-        f"B) {html.escape(str(q['option_b']))}\n"
-        f"C) {html.escape(str(q['option_c']))}\n"
-        f"D) {html.escape(str(q['option_d']))}\n\n"
+        f"{html.escape(shuffled_q['question'])}\n\n"
+        f"A) {html.escape(str(shuffled_q['A']))}\n"
+        f"B) {html.escape(str(shuffled_q['B']))}\n"
+        f"C) {html.escape(str(shuffled_q['C']))}\n"
+        f"D) {html.escape(str(shuffled_q['D']))}\n\n"
         f"Natija: {status_text}\n\n"
         f"💡 <b>Izoh:</b>\n{explanation_text}"
     )

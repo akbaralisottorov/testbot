@@ -113,19 +113,45 @@ def submit_test_answer(test_id: int, user_id: int, question_id: int, user_answer
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        # Get correct answer for validation (column is correct_answer now)
+        
+        # Get question order to reconstruct the deterministic shuffle
         cursor.execute(
-            "SELECT correct_answer, explanation FROM questions WHERE id = ?;",
+            "SELECT question_order FROM exam_answers WHERE session_id = ? AND question_id = ?;",
+            (test_id, question_id)
+        )
+        order_row = cursor.fetchone()
+        if not order_row:
+            return {"success": False, "message": "Savol tartibi topilmadi."}
+        order = order_row['question_order']
+        
+        # Get question details
+        cursor.execute(
+            "SELECT option_a, option_b, option_c, option_d, correct_answer, explanation FROM questions WHERE id = ?;",
             (question_id,)
         )
-        row = cursor.fetchone()
-        if not row:
+        q_row = cursor.fetchone()
+        if not q_row:
             return {"success": False, "message": "Savol topilmadi."}
             
-        correct_answer = row['correct_answer']
-        explanation = row['explanation']
+        # Prepare the question dictionary
+        q_dict = {
+            "question": "",
+            "A": q_row['option_a'],
+            "B": q_row['option_b'],
+            "C": q_row['option_c'],
+            "D": q_row['option_d'],
+            "correct": q_row['correct_answer']
+        }
         
-        is_correct = 1 if user_answer.upper() == correct_answer.upper() else 0
+        # Deterministically shuffle the options for this session
+        from services.question_helper import prepare_question, check_answer
+        shuffled_q = prepare_question(q_dict, test_id, order)
+        shuffled_correct = shuffled_q['correct']
+        explanation = q_row['explanation']
+        
+        # Check answer using check_answer function
+        is_correct_val = check_answer(user_answer, shuffled_correct)
+        is_correct = 1 if is_correct_val else 0
         
         # Save answer - this will trigger the database updates for stats and wrong answers
         save_answer(test_id, question_id, user_answer.upper(), is_correct)
@@ -133,7 +159,7 @@ def submit_test_answer(test_id: int, user_id: int, question_id: int, user_answer
         return {
             "success": True,
             "is_correct": bool(is_correct),
-            "correct_option": correct_answer,
+            "correct_option": shuffled_correct,
             "explanation": explanation
         }
     finally:

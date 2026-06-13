@@ -123,14 +123,35 @@ def run_tests():
     for i in range(1, 11):
         # Correct answer
         tq = t_questions[i - 1]
-        correct_option = tq['correct_option']
+        from services.question_helper import prepare_question
+        q_dict = {
+            "question": tq['question'],
+            "A": tq['option_a'],
+            "B": tq['option_b'],
+            "C": tq['option_c'],
+            "D": tq['option_d'],
+            "correct": tq['correct_option']
+        }
+        shuffled_q = prepare_question(q_dict, test_id, tq['question_order'])
+        correct_option = shuffled_q['correct']
         res = submit_test_answer(test_id, test_user_id, tq['question_id'], correct_option)
-        assert res['is_correct'] == True, "Correct answer flagged as incorrect"
+        assert res['is_correct'] == True, f"Correct answer {correct_option} (original: {tq['correct_option']}) flagged as incorrect"
         
     for i in range(11, 21):
         # Incorrect answer (using an option that is definitely wrong)
         tq = t_questions[i - 1]
-        wrong_option = 'A' if tq['correct_option'] != 'A' else 'B'
+        from services.question_helper import prepare_question
+        q_dict = {
+            "question": tq['question'],
+            "A": tq['option_a'],
+            "B": tq['option_b'],
+            "C": tq['option_c'],
+            "D": tq['option_d'],
+            "correct": tq['correct_option']
+        }
+        shuffled_q = prepare_question(q_dict, test_id, tq['question_order'])
+        shuffled_correct = shuffled_q['correct']
+        wrong_option = 'A' if shuffled_correct != 'A' else 'B'
         res = submit_test_answer(test_id, test_user_id, tq['question_id'], wrong_option)
         assert res['is_correct'] == False, "Incorrect answer flagged as correct"
         
@@ -162,8 +183,29 @@ def run_tests():
     assert len(user_mistakes) == 10, "Expected 10 mistakes"
     
     target_q = user_mistakes[0]
+    # Reconstruct same shuffled correct option for mistake practice
+    from services.question_helper import prepare_question
+    from database.connection import get_db_connection
+    conn = get_db_connection()
+    order_row = conn.execute(
+        "SELECT question_order FROM exam_answers WHERE session_id = ? AND question_id = ?;",
+        (test_id, target_q['question_id'])
+    ).fetchone()
+    conn.close()
+    
+    q_dict = {
+        "question": target_q['question'],
+        "A": target_q['option_a'],
+        "B": target_q['option_b'],
+        "C": target_q['option_c'],
+        "D": target_q['option_d'],
+        "correct": target_q['correct_option']
+    }
+    shuffled_q = prepare_question(q_dict, test_id, order_row[0])
+    correct_option = shuffled_q['correct']
+    
     # Solve it correctly
-    submit_res = submit_test_answer(test_id, test_user_id, target_q['question_id'], target_q['correct_option'])
+    submit_res = submit_test_answer(test_id, test_user_id, target_q['question_id'], correct_option)
     assert submit_res['is_correct'] == True, "Correct practice answer failed"
     
     # Check if removed from mistakes pool

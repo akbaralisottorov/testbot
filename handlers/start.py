@@ -164,6 +164,6 @@ async def analyze_history_callback(callback: CallbackQuery, state: FSMContext):
     await state.update_data(analysis_test_id=session_id)
     
     from handlers.test import process_analysis_callback
-    callback.data = "an:1"
-    await process_analysis_callback(callback, state)
+    new_callback = callback.model_copy(update={"data": "an:1"})
+    await process_analysis_callback(new_callback, state)
 

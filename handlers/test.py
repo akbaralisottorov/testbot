@@ -63,15 +63,27 @@ async def send_question_message(message: Message, test_id: int, order: int, user
         mins, secs = divmod(remaining_sec, 60)
         timer_str = f"⏱ <b>Qolgan vaqt:</b> {mins:02d}:{secs:02d}\n\n"
         
+    # Shuffle options deterministically
+    from services.question_helper import prepare_question
+    q_dict = {
+        "question": q_data['question'],
+        "A": q_data['option_a'],
+        "B": q_data['option_b'],
+        "C": q_data['option_c'],
+        "D": q_data['option_d'],
+        "correct": q_data['correct_option']
+    }
+    shuffled_q = prepare_question(q_dict, test_id, order)
+        
     text = (
         f"📖 <b>Fan:</b> {html.escape(q_data['subject'])}\n"
         f"❓ <b>Savol:</b> {order} / 50\n\n"
         f"{timer_str}"
-        f"{html.escape(q_data['question'])}\n\n"
-        f"A) {html.escape(str(q_data['option_a']))}\n"
-        f"B) {html.escape(str(q_data['option_b']))}\n"
-        f"C) {html.escape(str(q_data['option_c']))}\n"
-        f"D) {html.escape(str(q_data['option_d']))}\n\n"
+        f"{html.escape(shuffled_q['question'])}\n\n"
+        f"A) {html.escape(str(shuffled_q['A']))}\n"
+        f"B) {html.escape(str(shuffled_q['B']))}\n"
+        f"C) {html.escape(str(shuffled_q['C']))}\n"
+        f"D) {html.escape(str(shuffled_q['D']))}\n\n"
         f"📊 <b>Jarayon:</b> {html.escape(progress)}"
     )
     
@@ -420,12 +432,24 @@ async def process_analysis_callback(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("Savol topilmadi.")
         return
         
+    # Reconstruct the deterministic shuffle
+    from services.question_helper import prepare_question, check_answer
+    q_dict = {
+        "question": q_data['question'],
+        "A": q_data['option_a'],
+        "B": q_data['option_b'],
+        "C": q_data['option_c'],
+        "D": q_data['option_d'],
+        "correct": q_data['correct_option']
+    }
+    shuffled_q = prepare_question(q_dict, test_id, order)
+    
     user_ans = q_data['user_answer']
-    correct_ans = q_data['correct_option']
+    correct_ans = shuffled_q['correct']
     
     if user_ans is None:
         status_text = "❌ <b>Belgilanmagan</b>"
-    elif user_ans == correct_ans:
+    elif check_answer(user_ans, correct_ans):
         status_text = "✅ <b>To'g'ri</b>"
     else:
         status_text = f"❌ <b>Noto'g'ri</b> (Siz: {html.escape(user_ans)})"
@@ -435,11 +459,11 @@ async def process_analysis_callback(callback: CallbackQuery, state: FSMContext):
     text = (
         f"📊 <b>Xatolar tahlili</b> | Savol {order} / 50\n"
         f"📖 <b>Fan:</b> {html.escape(q_data['subject'])}\n\n"
-        f"{html.escape(q_data['question'])}\n\n"
-        f"A) {html.escape(str(q_data['option_a']))}\n"
-        f"B) {html.escape(str(q_data['option_b']))}\n"
-        f"C) {html.escape(str(q_data['option_c']))}\n"
-        f"D) {html.escape(str(q_data['option_d']))}\n\n"
+        f"{html.escape(shuffled_q['question'])}\n\n"
+        f"A) {html.escape(str(shuffled_q['A']))}\n"
+        f"B) {html.escape(str(shuffled_q['B']))}\n"
+        f"C) {html.escape(str(shuffled_q['C']))}\n"
+        f"D) {html.escape(str(shuffled_q['D']))}\n\n"
         f"👤 Sizning javobingiz: {html.escape(user_ans or 'Belgilanmagan')}\n"
         f"🔑 To'g'ri javob: <b>{html.escape(correct_ans)}</b> ({status_text})\n\n"
         f"💡 <b>Izoh:</b>\n{explanation_text}"
