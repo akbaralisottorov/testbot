@@ -223,6 +223,9 @@ async def process_excel_upload(message: Message, state: FSMContext, bot: Bot):
         result = parse_and_import_excel(temp_path, clear_existing=(mode == 'clear'))
         
         if result['success']:
+            from database import export_questions_to_excel
+            export_questions_to_excel(os.path.join(DATA_DIR, "tests.xlsx"))
+            
             res_text = (
                 "✅ <b>Testlar muvaffaqiyatli import qilindi!</b>\n\n"
                 f"📥 Baza yuklandi: <code>{result['imported']}</code> ta yangi savol.\n"
@@ -320,7 +323,10 @@ async def process_add_q_explanation(message: Message, state: FSMContext):
         explanation=explanation
     )
     
-    await return_to_admin(message, state, f"Savol muvaffaqiyatli qo'shildi! ID: `{qid}`")
+    from database import export_questions_to_excel
+    export_questions_to_excel(os.path.join(DATA_DIR, "tests.xlsx"))
+    
+    await return_to_admin(message, state, f"Savol muvaffaqiyatli qo'shildi! ID: <code>{qid}</code>")
 
 # --- Individual Delete Question ---
 @router.callback_query(F.data == "admin_del_q")
@@ -343,9 +349,11 @@ async def process_delete_q(message: Message, state: FSMContext):
         
     success = delete_question(qid)
     if success:
-        await return_to_admin(message, state, f"ID `{qid}` bo'lgan savol muvaffaqiyatli o'chirildi.")
+        from database import export_questions_to_excel
+        export_questions_to_excel(os.path.join(DATA_DIR, "tests.xlsx"))
+        await return_to_admin(message, state, f"ID <code>{qid}</code> bo'lgan savol muvaffaqiyatli o'chirildi.")
     else:
-        await return_to_admin(message, state, f"ID `{qid}` bo'lgan savol topilmadi.")
+        await return_to_admin(message, state, f"ID <code>{qid}</code> bo'lgan savol topilmadi.")
 
 # --- Individual Edit Question Wizard ---
 @router.callback_query(F.data == "admin_edit_q")
@@ -496,7 +504,10 @@ async def process_edit_explanation(message: Message, state: FSMContext):
         explanation=explanation
     )
     
-    await return_to_admin(message, state, f"Savol muvaffaqiyatli tahrirlandi! ID: `{data['edit_qid']}`")
+    from database import export_questions_to_excel
+    export_questions_to_excel(os.path.join(DATA_DIR, "tests.xlsx"))
+    
+    await return_to_admin(message, state, f"Savol muvaffaqiyatli tahrirlandi! ID: <code>{data['edit_qid']}</code>")
 
 # --- Broadcast Message Handler ---
 @router.callback_query(F.data == "admin_broadcast")

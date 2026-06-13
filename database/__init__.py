@@ -36,5 +36,6 @@ from database.models import (
     has_taken_daily_mock,
     get_overall_leaderboard,
     get_daily_mock_leaderboard,
-    clear_user_mistakes
+    clear_user_mistakes,
+    export_questions_to_excel
 )

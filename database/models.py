@@ -685,3 +685,36 @@ def clear_user_mistakes(user_id: int):
         conn.commit()
     finally:
         conn.close()
+
+def export_questions_to_excel(file_path: str):
+    import pandas as pd
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT s.name as subject, q.question_text as question, 
+                   q.option_a, q.option_b, q.option_c, q.option_d, 
+                   q.correct_answer, q.explanation
+            FROM questions q
+            JOIN subjects s ON q.subject_id = s.id
+            ORDER BY q.id ASC;
+            """
+        )
+        rows = cursor.fetchall()
+        data = []
+        for r in rows:
+            data.append({
+                'subject': r['subject'],
+                'question': r['question'],
+                'option_a': r['option_a'],
+                'option_b': r['option_b'],
+                'option_c': r['option_c'],
+                'option_d': r['option_d'],
+                'correct_answer': r['correct_answer'],
+                'explanation': r['explanation']
+            })
+        df = pd.DataFrame(data)
+        df.to_excel(file_path, index=False, engine="openpyxl")
+    finally:
+        conn.close()
