@@ -1,0 +1,25 @@
+# Python virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# Environments / Secrets
+.env
+
+# Database, charts and test files
+data/database.db
+data/temp_import_*.xlsx
+data/exam_results_export.xlsx
+data/progress_*.png
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE files
+.vscode/
+.idea/
+.gemini/
